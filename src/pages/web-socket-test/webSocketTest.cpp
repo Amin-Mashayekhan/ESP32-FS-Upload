@@ -3,7 +3,7 @@
 #include <ESPAsyncWebServer.h>
 #include "../../modules/web-socket/WebSocketModule.h"
 #include "../../modules/web-socket/webSocketShared.h"
-#include <SPIFFS.h>  // Use SPIFFS instead of LittleFS for ESP32
+#include <LittleFS.h>
 
 // Create WebSocket object
 WebSocketModule testWebSocket("/web-socket-test-ws");
@@ -19,18 +19,17 @@ void onWebSocketEventWST(AsyncWebSocket *server, AsyncWebSocketClient *client, A
   {
     Serial.printf("Client disconnected from web socket test page: %u\n", client->id());
   }
-
 }
 
 // Function to set up WebSocket on the test page
 void setupWebSocketTestPage(AsyncWebServer *server)
 {
-  testWebSocket.onEvent(onWebSocketEventWST);  // Register the event handler
+  testWebSocket.onEvent(onWebSocketEventWST); // Register the event handler
   testWebSocket.addToServer(server);
-  
+
   // Serve the HTML file for the WebSocket test page
   server->on("/web-socket-test/", HTTP_GET, [](AsyncWebServerRequest *request)
-             { request->send(SPIFFS, "/web-socket-test.html", "text/html"); });
+             { request->send(LittleFS, "/web-socket-test.html", "text/html"); });
 }
 
 // Variables for managing the sending interval and success/fail counts
@@ -53,10 +52,10 @@ void notifyClients()
     jsonDataWST += "\"preparationMoment\": \"" + String(currentMillis) + "\",";
     jsonDataWST += "\"serverStartSecond\": \"" + String(serverStartSecond) + "\",";
     jsonDataWST += "\"fastCounter\": \"" + String(fastCounter) + "\"}";
-    
-    bool sent = testWebSocket.broadcastMessage(jsonDataWST);  // Send data to all connected clients
-    
-    if (testWebSocket.clientCount() > 0)  // Check if clients are connected
+
+    bool sent = testWebSocket.broadcastMessage(jsonDataWST); // Send data to all connected clients
+
+    if (testWebSocket.clientCount() > 0) // Check if clients are connected
     {
       if (sent)
       {

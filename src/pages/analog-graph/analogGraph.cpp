@@ -1,7 +1,7 @@
 #include "analogGraph.h"
 #include "../../modules/web-socket/WebSocketModule.h"
 #include "../../modules/web-socket/webSocketShared.h"
-#include <SPIFFS.h>  // Use SPIFFS for ESP32
+#include <LittleFS.h>
 
 // Create WebSocket object
 WebSocketModule analogGraphWebSocket("/analog-graph-ws");
@@ -22,14 +22,14 @@ void onWebSocketEventAG(AsyncWebSocket *server, AsyncWebSocketClient *client, Aw
 // Function to set up the WebSocket on the analog graph page
 void setupAnalogGraphWebSocketPage(AsyncWebServer *server)
 {
-  analogGraphWebSocket.onEvent(onWebSocketEventAG);  // Register the event handler
+  analogGraphWebSocket.onEvent(onWebSocketEventAG); // Register the event handler
   analogGraphWebSocket.addToServer(server);
 
-  // Serve the HTML page stored in SPIFFS
+  // Serve the HTML page stored in LittleFS
   server->on("/analog/", HTTP_GET, [](AsyncWebServerRequest *request)
              {
-    if (SPIFFS.exists("/analog.html")) {
-      request->send(SPIFFS, "/analog.html", "text/html");
+    if (LittleFS.exists("/analog.html")) {  // Check for the file in LittleFS
+      request->send(LittleFS, "/analog.html", "text/html");
     } else {
       request->send(404, "text/plain", "File Not Found");
     } });
@@ -38,13 +38,13 @@ void setupAnalogGraphWebSocketPage(AsyncWebServer *server)
 unsigned long lastSendTimeAGP = 0;
 void notifyAnalogGraph()
 {
-  if (currentMillis - lastSendTimeAGP >= 76)
+  if (currentMillis - lastSendTimeAGP >= 86)
   {
     lastSendTimeAGP = currentMillis;
 
     // Serve the analog reading data as JSON
-    int analogValue = analogRead(32);  // ESP32 ADC pin (change to any valid ADC pin)
+    int analogValue = analogRead(32); // ESP32 ADC pin (change to any valid ADC pin)
     String jsonDataAG = "{\"analog\":" + String(analogValue) + "}";
-    analogGraphWebSocket.broadcastMessage(jsonDataAG);  // Send data to all connected clients
+    analogGraphWebSocket.broadcastMessage(jsonDataAG); // Send data to all connected clients
   }
 }
