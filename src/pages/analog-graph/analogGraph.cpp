@@ -36,15 +36,20 @@ void setupAnalogGraphWebSocketPage(AsyncWebServer *server)
 }
 
 unsigned long lastSendTimeAGP = 0;
+unsigned long sendIntervalAGP = 100; // Initial interval in milliseconds
+
 void notifyAnalogGraph()
 {
-  if (currentMillis - lastSendTimeAGP >= 86)
+  // Check if enough time has passed since the last message was sent
+  if (currentMillis - lastSendTimeAGP >= sendIntervalAGP)
   {
     lastSendTimeAGP = currentMillis;
 
-    // Serve the analog reading data as JSON
-    int analogValue = analogRead(32); // ESP32 ADC pin (change to any valid ADC pin)
+    int analogValue = analogRead(32); // Read analog input
     String jsonDataAG = "{\"analog\":" + String(analogValue) + "}";
-    analogGraphWebSocket.broadcastMessage(jsonDataAG); // Send data to all connected clients
+
+    // Attempt to send message and check if it's successful
+    analogGraphWebSocket.broadcastMessage(jsonDataAG);
   }
 }
+

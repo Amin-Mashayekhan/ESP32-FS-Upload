@@ -34,7 +34,7 @@
         </div>
     </nav>
     <h2>Analog Sensor Data</h2>
-    <canvas id="myChart" style="width:100%; max-height: 100vh;"></canvas>
+    <canvas id="myChart" style="min-width:100%; max-height: 90vh;"></canvas>
     <script>
         var ctx = document.getElementById('myChart').getContext('2d');
         var chart = new Chart(ctx, {
@@ -52,33 +52,47 @@
             options: {
                 scales: {
                     x: { display: true },
-                    y: { min: 0, max: 1023 }
+                    y: { min: 0, max: 4500 }
                 }
             }
         });
 
         var websocket;
-
-        console.log("🚀 ~ outer:")
         window.onload = function () {
             websocket = new WebSocket(`ws://${location.host}/analog-graph-ws`);
             websocket.onopen = () => console.log("Connected to WebSocket");
             websocket.onclose = () => console.log("Disconnected from WebSocket");
-            console.log("🚀 ~ onload ", websocket)
 
+            let updateCounter = 0;
+            const updateFrequency = 50;
+            const maxDataPoints = 200; // Limit max data points to avoid memory buildup
             websocket.onmessage = function (event) {
-                var data = JSON.parse(event.data);
+                try {
+                    const data = JSON.parse(event.data);
 
-                var time = new Date().toLocaleTimeString();
-                chart.data.labels.push(time);
-                chart.data.datasets[0].data.push(data.analog);
-                chart.update();
-                if (chart.data.labels.length > 200) {
-                    chart.data.labels.shift();
-                    chart.data.datasets[0].data.shift();
+                    // Add new data to chart
+                    const time = new Date().toLocaleTimeString();
+                    chart.data.labels.push(time);
+                    chart.data.datasets[0].data.push(data.analog);
+
+                    // Maintain a max of data points
+                    if (chart.data.labels.length > maxDataPoints) {
+                        chart.data.labels.shift();
+                        chart.data.datasets[0].data.shift();
+                    }
+
+                    // Only update chart at specified frequency to reduce redraws
+                    updateCounter++;
+                    if (updateCounter >= updateFrequency) {
+                        chart.update();
+                        updateCounter = 0;
+                    }
+
+                } catch (error) {
+                    console.error("Error processing message:", error);
                 }
-            }
-        }
+            };
+        };
     </script>
 </body>
 
