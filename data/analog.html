@@ -37,10 +37,10 @@
     <canvas id="myChart" style="min-width:100%; max-height: 90vh;"></canvas>
     <script>
         var ctx = document.getElementById('myChart').getContext('2d');
-        var chart = new Chart(ctx, {
+        const chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: [],
+                labels: [], // No labels on the x-axis
                 datasets: [{
                     label: 'Analog Reading',
                     data: [],
@@ -51,7 +51,7 @@
             },
             options: {
                 scales: {
-                    x: { display: true },
+                    x: { display: false }, // Hide x-axis labels
                     y: { min: 0, max: 4500 }
                 }
             }
@@ -63,31 +63,27 @@
             websocket.onopen = () => console.log("Connected to WebSocket");
             websocket.onclose = () => console.log("Disconnected from WebSocket");
 
-            let updateCounter = 0;
-            const updateFrequency = 50;
-            const maxDataPoints = 200; // Limit max data points to avoid memory buildup
+            const maxDataPoints = 300;
             websocket.onmessage = function (event) {
                 try {
-                    const data = JSON.parse(event.data);
+                    const dataArray = JSON.parse(event.data);
 
-                    // Add new data to chart
-                    const time = new Date().toLocaleTimeString();
-                    chart.data.labels.push(time);
-                    chart.data.datasets[0].data.push(data.analog);
-
-                    // Maintain a max of data points
-                    if (chart.data.labels.length > maxDataPoints) {
-                        chart.data.labels.shift();
-                        chart.data.datasets[0].data.shift();
+                    // Maintain a maximum of points on the chart
+                    if (chart.data.datasets[0].data.length > maxDataPoints) {
+                        chart.data.datasets[0].data.splice(0, chart.data.datasets[0].data.length - maxDataPoints);
+                        chart.data.labels.splice(0, chart.data.labels.length - maxDataPoints);
+                        // Force chart update to render the new data
+                        chart.update('none'); // 'none' as the mode to prevent animations
                     }
 
-                    // Only update chart at specified frequency to reduce redraws
-                    updateCounter++;
-                    if (updateCounter >= updateFrequency) {
-                        chart.update();
-                        updateCounter = 0;
-                    }
 
+                    // Append each value to the chart data without x-axis labels
+                    dataArray.forEach(value => {
+                        chart.data.datasets[0].data.push(value)
+                        chart.data.labels.push(''); // Empty label
+                    });
+                    // Update the chart again after adding new data
+                    chart.update('');
                 } catch (error) {
                     console.error("Error processing message:", error);
                 }

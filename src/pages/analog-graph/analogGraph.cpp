@@ -36,20 +36,38 @@ void setupAnalogGraphWebSocketPage(AsyncWebServer *server)
 }
 
 unsigned long lastSendTimeAGP = 0;
-unsigned long sendIntervalAGP = 100; // Initial interval in milliseconds
+unsigned long sendIntervalAGP = 3; // Initial interval in milliseconds
+// Array for storing analog readings
+const int BUFFER_SIZE = 80;
+int analogValues[BUFFER_SIZE];
+int analogIndex = 0;
 
 void notifyAnalogGraph()
 {
-  // Check if enough time has passed since the last message was sent
+  // Collect analog data every 1 ms
   if (currentMillis - lastSendTimeAGP >= sendIntervalAGP)
   {
     lastSendTimeAGP = currentMillis;
+    analogValues[analogIndex++] = analogRead(32); // Read analog from pin 32
+    if (analogIndex >= BUFFER_SIZE)
+    {
+      analogIndex = 0; // Reset index after filling buffer
 
-    int analogValue = analogRead(32); // Read analog input
-    String jsonDataAG = "{\"analog\":" + String(analogValue) + "}";
+      // Convert the buffer to a JSON array
+      String jsonData = "[";
+      for (int i = 0; i < BUFFER_SIZE; i++)
+      {
+        jsonData += analogValues[i];
+        if (i < BUFFER_SIZE - 1)
+          jsonData += ",";
+      }
+      jsonData += "]";
 
-    // Attempt to send message and check if it's successful
-    analogGraphWebSocket.broadcastMessage(jsonDataAG);
+      // Broadcast the JSON data
+      if (analogGraphWebSocket.clientCount() > 0)
+      {
+        analogGraphWebSocket.broadcastMessage(jsonData);
+      }
+    }
   }
 }
-
